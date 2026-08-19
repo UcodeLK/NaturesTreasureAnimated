@@ -124,7 +124,7 @@ body.is-loading {
   width: 0%;
   background: linear-gradient(90deg, var(--accent-gold), #ffffff);
   transition: width 0.15s ease-out;
-  box-shadow: 0 0 12px var(--accent-gold);
+
 }
 
 .loader-meta {
@@ -183,7 +183,7 @@ body.is-loading {
   height: 7px;
   border-radius: 50%;
   background: var(--accent-gold);
-  box-shadow: 0 0 10px var(--accent-gold);
+
 }
 
 .nav-actions {
@@ -213,7 +213,7 @@ body.is-loading {
 .btn-inquire:hover {
   background: var(--botanical-green-light);
   border-color: var(--accent-gold);
-  box-shadow: 0 0 20px rgba(245, 200, 121, 0.3);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
   transform: translateY(-1px);
 }
 
@@ -305,7 +305,7 @@ body.is-loading {
   height: 100%;
   width: 0%;
   background: linear-gradient(90deg, var(--accent-gold), #ffffff);
-  box-shadow: 0 0 10px var(--accent-gold);
+
   border-radius: 99px;
   transition: width 0.15s ease-out;
 }
@@ -383,7 +383,7 @@ body.is-loading {
 .timeline-step.is-active .step-dot {
   border-color: var(--accent-gold);
   background: var(--accent-gold);
-  box-shadow: 0 0 12px var(--accent-gold), 0 0 4px #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
   transform: scale(1.2);
 }
 
@@ -434,14 +434,14 @@ body.is-loading {
 }
 
 @keyframes promptGlow {
-  0%, 100% { opacity: 0.85; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95), 0 0 15px rgba(245, 200, 121, 0.2); }
-  50% { opacity: 1; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95), 0 0 25px rgba(245, 200, 121, 0.7); }
+  0%, 100% { opacity: 0.85; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95); }
+  50% { opacity: 1; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95); }
 }
 
 .scroll-arrow {
   font-size: 1.2rem;
   color: var(--accent-gold);
-  text-shadow: 0 0 10px var(--accent-gold);
+
   animation: bounceArrow 1.6s ease-in-out infinite;
 }
 
@@ -585,6 +585,7 @@ body.is-loading {
 
 .cta-wrap {
   margin-top: 2.2rem;
+  pointer-events: auto;
 }
 
 .btn-primary-action {
@@ -599,7 +600,7 @@ body.is-loading {
   padding: 1.05rem 2.5rem;
   cursor: pointer;
   pointer-events: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 25px rgba(245, 200, 121, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   transition: border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
@@ -641,7 +642,7 @@ body.is-loading {
 
 .btn-primary-action:hover {
   border-color: var(--accent-gold);
-  box-shadow: 0 0 35px rgba(245, 200, 121, 0.6), 0 4px 20px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
 }
 
 .btn-primary-action:active {
