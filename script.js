@@ -66,6 +66,8 @@
   const scrollPrompt = document.getElementById('scrollPrompt');
   const replayBtn = document.getElementById('btn-replay');
   const storyBeats = document.querySelectorAll('.story-beat');
+  const timelineProgress = document.getElementById('timelineProgress');
+  const timelineSteps = document.querySelectorAll('.timeline-step');
 
   // --- STATE ---
   let targetFrame = 0;
@@ -304,6 +306,29 @@
         beat.classList.remove('is-exiting');
       }
     });
+
+    // 3. Chapter Timeline Sync
+    if (timelineProgress) {
+      timelineProgress.style.height = `${Math.min(100, Math.max(0, progress * 100))}%`;
+    }
+
+    if (timelineSteps && timelineSteps.length > 0) {
+      let activeIdx = 0;
+      timelineSteps.forEach((step, idx) => {
+        const target = parseFloat(step.getAttribute('data-target') || '0');
+        if (progress >= target - 0.06) {
+          activeIdx = idx;
+        }
+      });
+
+      timelineSteps.forEach((step, idx) => {
+        if (idx === activeIdx) {
+          step.classList.add('is-active');
+        } else {
+          step.classList.remove('is-active');
+        }
+      });
+    }
   }
 
   // --- SINGLE GLOBAL RENDER LOOP ---
@@ -358,6 +383,44 @@
   if (viewportStage) {
     observer.observe(viewportStage);
   }
+
+  // --- TIMELINE STEP CLICK NAVIGATION ---
+  if (timelineSteps && timelineSteps.length > 0) {
+    timelineSteps.forEach((step) => {
+      step.addEventListener('click', () => {
+        const targetProgress = parseFloat(step.getAttribute('data-target') || '0');
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        const targetScrollY = targetProgress * maxScroll;
+
+        window.scrollTo({
+          top: targetScrollY,
+          behavior: 'smooth'
+        });
+      });
+    });
+  }
+
+  // --- ACCESSIBILITY: KEYBOARD NAVIGATION ---
+  window.addEventListener('keydown', (e) => {
+    // Only intercept if user is not in an input or modal
+    if (['ArrowDown', 'PageDown'].includes(e.key)) {
+      e.preventDefault();
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const stepSize = Math.max(120, maxScroll * 0.12);
+      window.scrollBy({ top: stepSize, behavior: 'smooth' });
+    } else if (['ArrowUp', 'PageUp'].includes(e.key)) {
+      e.preventDefault();
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const stepSize = Math.max(120, maxScroll * 0.12);
+      window.scrollBy({ top: -stepSize, behavior: 'smooth' });
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    }
+  });
 
   // --- REPLAY ACTION ---
   if (replayBtn) {
