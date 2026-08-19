@@ -309,7 +309,7 @@
 
     // 3. Chapter Timeline Sync
     if (timelineProgress) {
-      timelineProgress.style.height = `${Math.min(100, Math.max(0, progress * 100))}%`;
+      timelineProgress.style.width = `${Math.min(100, Math.max(0, progress * 100))}%`;
     }
 
     if (timelineSteps && timelineSteps.length > 0) {
