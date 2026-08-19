@@ -590,20 +590,30 @@ body.is-loading {
 .btn-primary-action {
   position: relative;
   overflow: hidden;
-  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--accent-gold);
+  border: 1.5px solid var(--accent-gold);
+  border-radius: 4px;
+  padding: 1.05rem 2.5rem;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 25px rgba(245, 200, 121, 0.3);
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.btn-primary-action .btn-text {
+  position: relative;
+  z-index: 5;
   color: #040604;
   font-family: var(--font-heading);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.16em;
-  padding: 1rem 2.4rem;
-  border: 1px solid var(--accent-gold);
-  border-radius: 4px;
-  cursor: pointer;
-  pointer-events: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 25px rgba(245, 200, 121, 0.3);
-  transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+  text-transform: uppercase;
+  transition: color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
 }
 
 .btn-primary-action::before {
@@ -611,25 +621,27 @@ body.is-loading {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 140%;
-  height: 0;
-  padding-bottom: 140%;
+  width: 280px;
+  height: 280px;
   border-radius: 50%;
   background: #040604;
   transform: translate(-50%, -50%) scale(0);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: -1;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2;
   pointer-events: none;
 }
 
 .btn-primary-action:hover::before {
-  transform: translate(-50%, -50%) scale(1.6);
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.btn-primary-action:hover .btn-text {
+  color: var(--accent-gold);
 }
 
 .btn-primary-action:hover {
-  color: var(--accent-gold);
   border-color: var(--accent-gold);
-  box-shadow: 0 0 30px rgba(245, 200, 121, 0.55), 0 4px 20px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 35px rgba(245, 200, 121, 0.6), 0 4px 20px rgba(0, 0, 0, 0.9);
 }
 
 .btn-primary-action:active {
