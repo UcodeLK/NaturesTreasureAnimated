@@ -95,7 +95,6 @@
     try {
       await img.decode();
     } catch (e) {
-      // Fallback in case decode rejects or is interrupted
       if (!img.complete) {
         await new Promise((resolve) => {
           img.onload = () => resolve();
@@ -108,7 +107,7 @@
     return img;
   }
 
-  // --- PAIR LOADER WITH CONCURRENCY MANAGEMENT ---
+  // --- PAIR LOADER WITH MICRO-CONCURRENCY (Prevents CPU/Decode Stutter) ---
   async function loadPair(pairIdx, onProgress) {
     if (pairIdx < 0 || pairIdx >= TOTAL_PAIRS) return;
     const pair = pairs[pairIdx];
@@ -122,19 +121,34 @@
     let loadedInPair = 0;
 
     pair.promise = (async () => {
-      const promises = pair.paths.map(async (path) => {
-        const img = await decodeAndCacheFrame(path);
-        loadedInPair++;
-        if (typeof onProgress === 'function') {
-          onProgress(loadedInPair, pair.count);
-        }
-        return img;
-      });
+      // Decode in smooth micro-batches (concurrency 4) to prevent thread locks
+      const concurrency = 4;
+      let pathIdx = 0;
 
-      await Promise.all(promises);
+      async function worker() {
+        while (pathIdx < pair.paths.length) {
+          const currentIdx = pathIdx++;
+          const path = pair.paths[currentIdx];
+          await decodeAndCacheFrame(path);
+          loadedInPair++;
+          if (typeof onProgress === 'function') {
+            onProgress(loadedInPair, pair.count);
+          }
+        }
+      }
+
+      const workers = [];
+      const numWorkers = Math.min(concurrency, pair.paths.length);
+      for (let w = 0; w < numWorkers; w++) {
+        workers.push(worker());
+      }
+      await Promise.all(workers);
+
       pair.status = 'loaded';
       loadingPairsCount--;
-      manageActiveMemory(activePairIndex);
+
+      // Continue queue chain until all pairs are ready
+      processQueue();
       return pair;
     })();
 
@@ -142,23 +156,20 @@
   }
 
   // --- MEMORY OPTIMIZATION & EVICTION ---
-  // Retains only current pair and next pair in active memory.
-  // Completed older pairs retain only their final frame for seamless transitions.
+  // Retains current pair, next pair, and previous pair for ultra-fast scrubbing.
+  // Releases intermediate frames for completed distant pairs.
   function manageActiveMemory(currentPair) {
-    const keepPairs = new Set([currentPair, currentPair + 1]);
-
-    // If scrubbing backwards, keep previous pair if active
-    if (currentPair > 0) {
-      keepPairs.add(currentPair - 1);
-    }
+    const keepPairs = new Set([
+      currentPair,
+      currentPair + 1,
+      Math.max(0, currentPair - 1)
+    ]);
 
     pairs.forEach((pair) => {
       if (!keepPairs.has(pair.index)) {
         if (pair.status === 'loaded') {
-          // Release intermediate frames
           pair.paths.forEach((path, idx) => {
             const isLastFrame = (idx === pair.paths.length - 1);
-            // Keep final frame of completed section for seamless fallback
             if (!isLastFrame && frameCache.has(path)) {
               frameCache.delete(path);
             }
@@ -170,22 +181,28 @@
     });
   }
 
-  // --- PROGRESSIVE QUEUE MANAGER ---
-  // Enforces max 2 pairs loading simultaneously:
-  // Pair 1 -> starts Pair 2 background
-  // Pair 1 active -> queue Pair 3
-  // Pair 2 active -> queue Pair 4, etc.
-  function checkQueue(currentPair) {
-    activePairIndex = currentPair;
+  // --- PROGRESSIVE QUEUE PROCESSOR ---
+  // Enforces max 2 pairs loading simultaneously while proactively preloading ahead:
+  function processQueue() {
+    if (loadingPairsCount >= 2) return;
 
-    // Determine target pairs to have ready
-    const neededPairs = [currentPair, currentPair + 1];
-    if (currentPair + 2 < TOTAL_PAIRS) {
-      neededPairs.push(currentPair + 2);
+    // 1. High Priority: Ensure current pair and next pair are loading/loaded
+    const priorityList = [activePairIndex, activePairIndex + 1];
+    if (activePairIndex > 0) {
+      priorityList.push(activePairIndex - 1);
     }
 
-    for (const pIdx of neededPairs) {
-      if (pIdx < TOTAL_PAIRS && loadingPairsCount < 2) {
+    // 2. Proactive queue: Lookahead pairs until all are loaded
+    for (let i = 0; i < TOTAL_PAIRS; i++) {
+      const idx = (activePairIndex + i) % TOTAL_PAIRS;
+      if (!priorityList.includes(idx)) {
+        priorityList.push(idx);
+      }
+    }
+
+    for (const pIdx of priorityList) {
+      if (loadingPairsCount >= 2) break;
+      if (pIdx >= 0 && pIdx < TOTAL_PAIRS) {
         const pair = pairs[pIdx];
         if (pair.status === 'idle') {
           loadPair(pIdx);
@@ -193,10 +210,17 @@
       }
     }
 
-    manageActiveMemory(currentPair);
+    manageActiveMemory(activePairIndex);
   }
 
-  // --- FIND CLOSEST LOADED FRAME (FALLBACK) ---
+  function checkQueue(currentPair) {
+    if (activePairIndex !== currentPair) {
+      activePairIndex = currentPair;
+      processQueue();
+    }
+  }
+
+  // --- FIND CLOSEST LOADED FRAME (FAILSAFE) ---
   function getClosestLoadedSrc(targetIdx) {
     const directPath = framePaths[targetIdx];
     if (frameCache.has(directPath)) {
@@ -216,21 +240,21 @@
       }
     }
 
-    return encodeURI(framePaths[0]);
+    const firstImg = frameCache.get(framePaths[0]);
+    return firstImg ? firstImg.src : encodeURI(framePaths[0]);
   }
 
   // --- FRAME DISPLAY UPDATE ---
   function renderFrame(frameIdx) {
     const targetIdx = Math.max(0, Math.min(TOTAL_FRAMES - 1, Math.round(frameIdx)));
 
-    if (targetIdx === lastRenderedIndex) return;
-
-    const targetSrc = getClosestLoadedSrc(targetIdx);
-    if (storyImage.src !== targetSrc) {
-      storyImage.src = targetSrc;
+    if (targetIdx !== lastRenderedIndex) {
+      const targetSrc = getClosestLoadedSrc(targetIdx);
+      if (storyImage.src !== targetSrc) {
+        storyImage.src = targetSrc;
+      }
+      lastRenderedIndex = targetIdx;
     }
-
-    lastRenderedIndex = targetIdx;
 
     // Determine which pair this frame belongs to
     const pair = pairs.find(p => targetIdx >= p.startIndex && targetIdx <= p.endIndex);
@@ -289,8 +313,8 @@
       return;
     }
 
-    // Smooth Lerp Interpolation
-    const delta = (targetFrame - currentFrame) * 0.18;
+    // Responsive Lerp Interpolation
+    const delta = (targetFrame - currentFrame) * 0.28;
     currentFrame += delta;
 
     if (Math.abs(targetFrame - currentFrame) < 0.001) {
